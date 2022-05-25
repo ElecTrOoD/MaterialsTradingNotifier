@@ -21,5 +21,5 @@
 
 8. Wait for the beep and then check the previously opened page
 
-The script opens the browser in headless mode every 15 seconds, parses the data from the table of materials and closes
+The script opens the browser in headless mode every 30 seconds, parses the data from the table of materials and closes
 the browser, the load on the system should be minimal.
