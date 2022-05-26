@@ -39,12 +39,10 @@ class Parse:
                     'amount': columns[3].get_text(),
                     'distance': columns[5].get_text(),
                 })
-            return sorted(data)
+            return sorted(data, key=lambda x: (x['system'], x['material']))
         except SessionNotCreatedException as e:
             print(e.msg)
             sys.exit(1)
-        except Exception:
-            return self.data
 
     def run(self):
         self.data = self.get_data()
