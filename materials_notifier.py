@@ -1,5 +1,5 @@
 import sys
-from time import sleep
+import time
 
 from art import text2art
 from bs4 import BeautifulSoup
@@ -11,54 +11,63 @@ from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.support.wait import WebDriverWait
 
 
-class Parse:
+class Notifier:
     options = webdriver.ChromeOptions()
     options.add_argument('headless')
     options.add_experimental_option('excludeSwitches', ['enable-logging'])
 
     def __init__(self, url):
         self.url = url
-        self.count = 0
-        self.data = None
+        self.requests = 0
+        self.updates = 0
+        self.errors = 0
+        self.last_update = 'never'
+        self.last_system = ''
 
-    def get_data(self):
+    def check_updates(self):
+        self.requests += 1
         try:
-            browser = webdriver.Chrome(options=self.options)
-            browser.get(self.url)
             element_present = expected_conditions.presence_of_element_located(
                 (By.CLASS_NAME, 'dataTable'))
+
+            browser = webdriver.Chrome(options=self.options)
+            browser.get(self.url)
             WebDriverWait(browser, 15).until(element_present)
             soup = BeautifulSoup(browser.page_source, 'html.parser')
             browser.quit()
-            data = []
-            for row in soup.find_all('tr')[1:11]:
-                columns = row.find_all('td')
-                data.append({
-                    'material': columns[1].get_text(),
-                    'system': columns[2].get_text()[:-2],
-                    'amount': columns[3].get_text(),
-                    'distance': columns[5].get_text(),
-                })
-            return sorted(data, key=lambda x: (x['system'], x['material']))
+
+            columns = soup.find_all('tr')[1].find_all('td')
+            updated = columns[6].get_text()
+            new_system = columns[2].get_text()[:-2],
+
+            if updated == 'now' and new_system != self.last_system:
+                self.last_system = new_system
+                return True
+            return False
+
         except SessionNotCreatedException as e:
             print(e.msg)
             sys.exit(1)
+        except Exception as e:
+            self.errors += 1
+            return False
 
     def run(self):
-        self.data = self.get_data()
         while True:
-            sleep(30)
-            self.count += 1
-            print(f'\r[INFO] Check if the offers have been updated... Count: {self.count}', end='')
-            new_data = self.get_data()
-            if new_data == self.data:
+            print(f'\r[INFO] Check if the offers have been updated... Requests: {self.requests}, '
+                  f'updates: {self.updates}, errors: {self.errors}. Last update: {self.last_update}', end='')
+
+            time.sleep(30)
+            if not self.check_updates():
                 continue
+
             playsound('horn.mp3')
-            self.data = new_data
+            self.updates += 1
+            self.last_update = time.strftime('%H:%M')
 
 
 if __name__ == '__main__':
-    print(text2art('ED MN', font='block'))
+    print(text2art('EDMN', font='block'))
     while True:
         user_url = input('\nEnter URL: ')
         if 'https://inara.cz/market-materials/' in user_url:
@@ -66,5 +75,6 @@ if __name__ == '__main__':
             break
         else:
             print('[ERROR] Invalid link')
-    parser = Parse(user_url)
-    parser.run()
+
+    ed_notifier = Notifier(user_url)
+    ed_notifier.run()
